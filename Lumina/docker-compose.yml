@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # Ollama Service (optional - you can run Ollama natively)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: lumina-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    restart: unless-stopped
+    profiles:
+      - ollama
+
+  # Python Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lumina-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - ROBLOX_PLUGIN_KEY=your-secret-key-here
+      - DEBUG=true
+      - PORT=8000
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+    profiles:
+      - full
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lumina-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    profiles:
+      - full
+
+volumes:
+  ollama_data:
